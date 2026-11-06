@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CGO_ENABLED: "0"
+
+jobs:
+  test:
+    name: test (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+      - name: vet
+        run: go vet ./...
+      - name: test
+        run: go test -count=1 ./...
+      - name: build demo (static binary)
+        run: |
+          go build -o hello ./examples/hello
+          ! ldd hello 2>/dev/null
+          ./hello
+
+  guard:
+    name: zero dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: no third-party modules
+        run: |
+          if grep -q '^require' go.mod; then echo "go.mod must not require any module"; exit 1; fi
+      - name: no cgo
+        run: |
+          if grep -rl 'import "C"' --include='*.go' .; then echo "cgo is not allowed"; exit 1; fi
+      - name: cross-compile
+        run: |
+          GOOS=linux GOARCH=amd64 go build ./...
+          GOOS=linux GOARCH=arm64 go build ./...

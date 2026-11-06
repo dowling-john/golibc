@@ -1,0 +1,13 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Build output
+/bin/
+/hello
+*.test
+*.out
+
+# OS
+.DS_Store
