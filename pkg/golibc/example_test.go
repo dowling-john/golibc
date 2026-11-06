@@ -71,6 +71,14 @@ func ExampleSscanf() {
 	// Output: 3 ada 36 99.5
 }
 
+func ExampleStrftime() {
+	tm := golibc.Gmtime(1700000000)
+	buf := make([]byte, 64)
+	n := golibc.Strftime(&buf[0], len(buf), golibc.CStr("%A, %d %B %Y %H:%M:%S %Z (day %j, ISO week %V)"), tm)
+	fmt.Println(string(buf[:n]))
+	// Output: Tuesday, 14 November 2023 22:13:20 GMT (day 318, ISO week 46)
+}
+
 func ExampleSocketpair() {
 	var fds [2]int
 	golibc.Socketpair(golibc.AF_UNIX, golibc.SOCK_STREAM, 0, &fds)

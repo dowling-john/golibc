@@ -1,0 +1,83 @@
+# TZ<TAB>l<TAB>timestamp   |   TZ<TAB>m<TAB>year<TAB>month<TAB>day<TAB>hour<TAB>min<TAB>sec  (broken-down local time, isdst=-1)
+# Golden (localtime.golden) comes from glibc localtime_r/mktime: see scripts/gen_golden.sh. Ambiguous fall-back hours are left out on purpose:
+# glibc's choice there depends on earlier mktime calls in the same process.
+America/New_York	l	0
+America/New_York	l	1704067200
+America/New_York	l	1720000000
+America/New_York	l	1710053999
+America/New_York	l	1710054000
+America/New_York	l	1730613599
+America/New_York	l	1730613600
+America/New_York	l	-86400
+America/New_York	l	-2000000000
+America/New_York	l	4102444800
+America/New_York	m	2024	3	10	2	30	0
+America/New_York	m	2024	3	10	1	59	59
+America/New_York	m	2024	3	10	3	0	0
+America/New_York	m	2024	7	4	12	0	0
+America/New_York	m	2024	12	25	0	0	0
+America/New_York	m	2024	1	31	23	59	59
+America/New_York	m	2024	2	30	12	0	0
+America/New_York	m	2024	14	1	0	0	0
+America/New_York	m	2024	11	3	0	30	0
+America/New_York	m	2024	11	3	2	0	0
+America/New_York	m	1969	12	31	19	0	0
+America/New_York	m	1900	1	1	0	0	0
+America/New_York	m	2100	6	15	6	0	0
+Europe/London	l	0
+Europe/London	l	1711846799
+Europe/London	l	1711846800
+Europe/London	l	1729990799
+Europe/London	l	1729990800
+Europe/London	l	1700000000
+Europe/London	l	1720000000
+Europe/London	m	2024	3	31	1	30	0
+Europe/London	m	2024	3	31	0	59	59
+Europe/London	m	2024	3	31	2	0	0
+Europe/London	m	2024	7	1	12	0	0
+Europe/London	m	2024	12	25	0	0	0
+Europe/London	m	1970	1	1	0	0	0
+Europe/London	m	1971	6	1	0	0	0
+Asia/Kolkata	l	0
+Asia/Kolkata	l	1700000000
+Asia/Kolkata	l	1720000000
+Asia/Kolkata	l	-86400
+Asia/Kolkata	m	2024	1	1	0	0	0
+Asia/Kolkata	m	2024	6	15	23	59	59
+Asia/Kolkata	m	1970	1	1	5	30	0
+Asia/Kathmandu	l	0
+Asia/Kathmandu	l	1700000000
+Asia/Kathmandu	l	1720000000
+Asia/Kathmandu	m	2024	1	1	0	0	0
+Asia/Kathmandu	m	1985	6	1	12	0	0
+Australia/Lord_Howe	l	1700000000
+Australia/Lord_Howe	l	1720000000
+Australia/Lord_Howe	l	1712415599
+Australia/Lord_Howe	l	1712415600
+Australia/Lord_Howe	l	1727539199
+Australia/Lord_Howe	l	1727539200
+Australia/Lord_Howe	m	2024	1	15	12	0	0
+Australia/Lord_Howe	m	2024	7	15	12	0	0
+Australia/Lord_Howe	m	2024	10	6	2	15	0
+Australia/Lord_Howe	m	2024	10	6	2	45	0
+Pacific/Auckland	l	1700000000
+Pacific/Auckland	l	1720000000
+Pacific/Auckland	l	1727532000
+Pacific/Auckland	m	2024	1	1	0	0	0
+Pacific/Auckland	m	2024	7	1	0	0	0
+Pacific/Auckland	m	2024	9	29	2	30	0
+Pacific/Auckland	m	2024	4	7	3	30	0
+America/Sao_Paulo	l	1700000000
+America/Sao_Paulo	l	1720000000
+America/Sao_Paulo	l	1000000000
+America/Sao_Paulo	m	2024	1	1	0	0	0
+America/Sao_Paulo	m	2018	11	4	0	30	0
+America/Sao_Paulo	m	2019	2	17	12	0	0
+Pacific/Kiritimati	l	1700000000
+Pacific/Kiritimati	l	0
+Pacific/Kiritimati	m	2024	1	1	0	0	0
+UTC	l	0
+UTC	l	1700000000
+UTC	l	-1
+UTC	m	2024	1	1	0	0	0
+UTC	m	2024	2	30	25	61	61

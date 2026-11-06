@@ -2,6 +2,9 @@
 # Regenerates the golden files in pkg/golibc/testdata from real glibc:
 #   printf.golden  from printf.cases  (glibc printf)
 #   scan.golden    from scan.cases    (glibc sscanf)
+#   strftime.golden from strftime.cases (glibc gmtime_r + strftime, TZ unset = UTC)
+#   gmtime.golden  from gmtime.cases  (glibc gmtime_r)
+#   localtime.golden from localtime.cases (glibc localtime_r + mktime under various TZ)
 # Needs docker. Run from the repo root (or use `make golden`).
 set -e
 dir=pkg/golibc/testdata
@@ -66,10 +69,45 @@ for line in cases(f'{d}/scan.cases'):
     out.append('{ ' + ' '.join(decls) + f' int r = {call}; printf("ret=%d' + ''.join(' ' + f for f in fmts) + '\\n", r' + ''.join(', ' + v for v in vals) + '); }')
 out.append('return 0;}')
 open(f'{w}/scan.c', 'w').write('\n'.join(out))
+
+# ---- strftime: "timestamp<TAB>format" ----
+def cstr(x):
+    return x.replace('\\', '\\\\').replace('"', '\\"')
+out = ['#include <stdio.h>', '#include <string.h>', '#include <time.h>', 'int main(void){', 'char buf[512]; struct tm tm; time_t t; size_t n;']
+for line in cases(f'{d}/strftime.cases'):
+    ts, _, fmt = line.partition('\t')
+    out.append(f'memset(buf,0,sizeof buf); t={ts}LL; gmtime_r(&t,&tm); n=strftime(buf,sizeof buf,"{cstr(fmt)}",&tm); printf("%zu [%s]\\n",n,buf);')
+out.append('return 0;}')
+open(f'{w}/strftime.c', 'w').write('\n'.join(out))
+
+# ---- gmtime ----
+out = ['#include <stdio.h>', '#include <time.h>', 'int main(void){', 'struct tm tm; struct tm *r; time_t t;']
+for line in cases(f'{d}/gmtime.cases'):
+    out.append(f't={line}LL; r=gmtime_r(&t,&tm); if(!r) puts("null"); else printf("%d %d %d %d %d %d %d %d %d\\n",tm.tm_sec,tm.tm_min,tm.tm_hour,tm.tm_mday,tm.tm_mon,tm.tm_year,tm.tm_wday,tm.tm_yday,tm.tm_isdst);')
+out.append('return 0;}')
+open(f'{w}/gmtime.c', 'w').write('\n'.join(out))
+
+# ---- localtime / mktime under a TZ per case ----
+show = 'printf("%d %d %d %d %d %d %d %d %d %ld %s\\n",tm.tm_sec,tm.tm_min,tm.tm_hour,tm.tm_mday,tm.tm_mon,tm.tm_year,tm.tm_wday,tm.tm_yday,tm.tm_isdst,(long)tm.tm_gmtoff,tm.tm_zone);'
+out = ['#include <stdio.h>', '#include <stdlib.h>', '#include <time.h>', 'int main(void){', 'struct tm tm; time_t t;']
+for line in cases(f'{d}/localtime.cases'):
+    f = line.split('\t')
+    tz, kind = f[0], f[1]
+    out.append(f'setenv("TZ","{tz}",1); tzset();')
+    if kind == 'l':
+        out.append(f't={f[2]}LL; localtime_r(&t,&tm); {show}')
+    else:
+        y, mo, da, h, mi, se = f[2:8]
+        out.append(f'tm=(struct tm){{.tm_year={y}-1900,.tm_mon={mo}-1,.tm_mday={da},.tm_hour={h},.tm_min={mi},.tm_sec={se},.tm_isdst=-1}}; t=mktime(&tm); printf("t=%ld ",(long)t); {show}')
+out.append('return 0;}')
+open(f'{w}/localtime.c', 'w').write('\n'.join(out))
 PY
 
 docker run --rm -v "$work":/w golang:1.23 sh -c '
   gcc -w -o /printf /w/printf.c -lm && /printf > /w/printf.golden &&
-  gcc -w -o /scan /w/scan.c && /scan > /w/scan.golden'
-cp "$work/printf.golden" "$work/scan.golden" "$dir/"
+  gcc -w -o /scan /w/scan.c && /scan > /w/scan.golden &&
+  gcc -w -o /strftime /w/strftime.c && /strftime > /w/strftime.golden &&
+  gcc -w -o /gmtime /w/gmtime.c && /gmtime > /w/gmtime.golden &&
+  gcc -w -o /localtime /w/localtime.c && /localtime > /w/localtime.golden'
+cp "$work/printf.golden" "$work/scan.golden" "$work/strftime.golden" "$work/gmtime.golden" "$work/localtime.golden" "$dir/"
 wc -l "$dir"/*.golden
