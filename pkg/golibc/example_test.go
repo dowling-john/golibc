@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"unsafe"
 
-	"github.com/johndowling/golibc/pkg/golibc"
+	"github.com/dowling-john/golibc/pkg/golibc"
 )
 
 func ExampleSnprintf() {

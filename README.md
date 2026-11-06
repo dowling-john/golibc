@@ -1,7 +1,7 @@
 # golibc
 
-[![CI](https://github.com/johndowling/golibc/actions/workflows/ci.yml/badge.svg)](https://github.com/johndowling/golibc/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/johndowling/golibc/pkg/golibc.svg)](https://pkg.go.dev/github.com/johndowling/golibc/pkg/golibc)
+[![CI](https://github.com/dowling-john/golibc/actions/workflows/ci.yml/badge.svg)](https://github.com/dowling-john/golibc/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/dowling-john/golibc/pkg/golibc.svg)](https://pkg.go.dev/github.com/dowling-john/golibc/pkg/golibc)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **A C standard library written in pure Go.** It talks to the Linux kernel through raw system calls. There is no cgo, no libc, and not a single third-party module.
@@ -12,7 +12,7 @@ Programs built on it compile with `CGO_ENABLED=0` into one static binary that ne
 package main
 
 import (
-	"github.com/johndowling/golibc/pkg/golibc"
+	"github.com/dowling-john/golibc/pkg/golibc"
 )
 
 func main() {
@@ -39,7 +39,7 @@ pi=3.14159  hex=0xbeef  [ab    ]
 ## Install
 
 ```sh
-go get github.com/johndowling/golibc/pkg/golibc
+go get github.com/dowling-john/golibc/pkg/golibc
 ```
 
 Requires Go 1.23+ and Linux (`amd64` or `arm64`). See [Platform support](#platform-support).

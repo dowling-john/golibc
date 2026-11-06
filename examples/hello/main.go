@@ -6,7 +6,7 @@ package main
 import (
 	"unsafe"
 
-	"github.com/johndowling/golibc/pkg/golibc"
+	"github.com/dowling-john/golibc/pkg/golibc"
 )
 
 func main() {
