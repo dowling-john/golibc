@@ -70,3 +70,20 @@ func ExampleSscanf() {
 	fmt.Println(n, name, age, score)
 	// Output: 3 ada 36 99.5
 }
+
+func ExampleSocketpair() {
+	var fds [2]int
+	golibc.Socketpair(golibc.AF_UNIX, golibc.SOCK_STREAM, 0, &fds)
+	defer golibc.Close(fds[0])
+	defer golibc.Close(fds[1])
+
+	msg := []byte("ping")
+	golibc.Send(fds[0], unsafe.Pointer(&msg[0]), len(msg), 0)
+
+	// Wait up to a second for the other end to become readable, then read.
+	ready := golibc.Poll([]golibc.Pollfd{{Fd: int32(fds[1]), Events: golibc.POLLIN}}, 1000)
+	buf := make([]byte, 16)
+	n := golibc.Recv(fds[1], unsafe.Pointer(&buf[0]), len(buf), 0)
+	fmt.Println(ready, string(buf[:n]))
+	// Output: 1 ping
+}
