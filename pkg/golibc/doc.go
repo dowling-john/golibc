@@ -9,7 +9,7 @@
 //
 // The API follows C closely so that C code and C habits carry over: strings
 // are NUL-terminated *byte pointers, memory is void* (unsafe.Pointer), errors
-// are reported by returning -1 or nil and setting [Errno], and printf takes a
+// are reported by returning -1 or nil and setting errno (see [GetErrno]), and printf takes a
 // C format string with variadic arguments. Names are the C names with an
 // initial capital (strlen becomes [Strlen], fopen becomes [Fopen]).
 //

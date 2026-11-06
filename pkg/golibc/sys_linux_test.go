@@ -22,8 +22,8 @@ func TestWriteReadPipe(t *testing.T) {
 	if Close(p[0]) != 0 || Close(p[1]) != 0 {
 		t.Fatal("Close")
 	}
-	if Close(p[0]) != -1 || Errno != syscall.EBADF {
-		t.Errorf("double close: errno = %v", Errno)
+	if Close(p[0]) != -1 || GetErrno() != syscall.EBADF {
+		t.Errorf("double close: errno = %v", GetErrno())
 	}
 }
 
@@ -32,7 +32,7 @@ func TestMmap(t *testing.T) {
 	p := Mmap(nil, size, syscall.PROT_READ|syscall.PROT_WRITE,
 		syscall.MAP_PRIVATE|syscall.MAP_ANON, -1, 0)
 	if p == nil {
-		t.Fatalf("Mmap failed: %v", Errno)
+		t.Fatalf("Mmap failed: %v", GetErrno())
 	}
 	b := unsafe.Slice((*byte)(p), size)
 	if b[0] != 0 || b[size-1] != 0 {
@@ -40,6 +40,12 @@ func TestMmap(t *testing.T) {
 	}
 	b[size-1] = 7
 	if Munmap(p, size) != 0 {
-		t.Errorf("Munmap: %v", Errno)
+		t.Errorf("Munmap: %v", GetErrno())
 	}
 }
+
+func ptr(b []byte) unsafe.Pointer { return unsafe.Pointer(&b[0]) }
+
+func ptr32(p *int32) unsafe.Pointer { return unsafe.Pointer(p) }
+
+func ptrOf[T any](p *T) unsafe.Pointer { return unsafe.Pointer(p) }

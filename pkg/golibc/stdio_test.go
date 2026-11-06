@@ -27,7 +27,7 @@ func TestFileRoundTrip(t *testing.T) {
 	path := tmpPath(t, "a.txt")
 	f := Fopen(path, CStr("w"))
 	if f == nil {
-		t.Fatalf("Fopen: %v", Errno)
+		t.Fatalf("Fopen: %v", GetErrno())
 	}
 	Fprintf(f, CStr("line %d\n"), 1)
 	Fputs(CStr("line 2\n"), f)
@@ -97,10 +97,10 @@ func TestFseekFtell(t *testing.T) {
 
 func TestFopenModes(t *testing.T) {
 	path := tmpPath(t, "c.txt")
-	if Fopen(path, CStr("r")) != nil || Errno != ENOENT {
-		t.Errorf("open missing file: errno %v", Errno)
+	if Fopen(path, CStr("r")) != nil || GetErrno() != ENOENT {
+		t.Errorf("open missing file: errno %v", GetErrno())
 	}
-	if Fopen(path, CStr("q")) != nil || Errno != EINVAL {
+	if Fopen(path, CStr("q")) != nil || GetErrno() != EINVAL {
 		t.Error("bad mode")
 	}
 	f := Fopen(path, CStr("wb"))

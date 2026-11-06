@@ -4,6 +4,7 @@ package golibc
 
 import (
 	"math"
+	"math/bits"
 	"strconv"
 	"sync"
 	"syscall"
@@ -72,7 +73,7 @@ func parseUint(s *byte, endp **byte, base int) (mag uint64, neg, ovf bool) {
 		}
 	}
 	if base < 2 || base > 36 {
-		Errno = EINVAL
+		SetErrno(EINVAL)
 		setEnd(endp, s, 0)
 		return 0, false, false
 	}
@@ -102,13 +103,13 @@ func Strtol(s *byte, endp **byte, base int) int64 {
 	mag, neg, ovf := parseUint(s, endp, base)
 	if neg {
 		if ovf || mag > 1<<63 {
-			Errno = ERANGE
+			SetErrno(ERANGE)
 			return math.MinInt64
 		}
 		return -int64(mag)
 	}
 	if ovf || mag > math.MaxInt64 {
-		Errno = ERANGE
+		SetErrno(ERANGE)
 		return math.MaxInt64
 	}
 	return int64(mag)
@@ -119,7 +120,7 @@ func Strtol(s *byte, endp **byte, base int) int64 {
 func Strtoul(s *byte, endp **byte, base int) uint64 {
 	mag, neg, ovf := parseUint(s, endp, base)
 	if ovf {
-		Errno = ERANGE
+		SetErrno(ERANGE)
 		return math.MaxUint64
 	}
 	if neg {
@@ -190,7 +191,7 @@ func Strtod(s *byte, endp **byte) float64 {
 	}
 	v, err := strconv.ParseFloat(string(unsafe.Slice((*byte)(unsafe.Add(unsafe.Pointer(s), start)), i-start)), 64)
 	if err != nil && v != 0 { // overflow to ±Inf; plain syntax errors can't happen here
-		Errno = ERANGE
+		SetErrno(ERANGE)
 	}
 	setEnd(endp, s, i)
 	return v
@@ -215,33 +216,54 @@ type DivT struct{ Quot, Rem int }
 
 func Div(num, den int) DivT { return DivT{num / den, num % den} }
 
+// swap exchanges two size-byte elements, a word at a time when alignment allows.
 func swap(a, b unsafe.Pointer, size int) {
+	if (uintptr(a)|uintptr(b)|uintptr(size))&7 == 0 {
+		for ; size > 0; size -= 8 {
+			x, y := (*uint64)(a), (*uint64)(b)
+			*x, *y = *y, *x
+			a, b = unsafe.Add(a, 8), unsafe.Add(b, 8)
+		}
+		return
+	}
 	x, y := mem(a, size), mem(b, size)
 	for i := range x {
 		x[i], y[i] = y[i], x[i]
 	}
 }
 
-// Qsort sorts n elements of size bytes in place. It is a heapsort: O(n log n)
-// worst case, no recursion, no allocation, and not stable.
-func Qsort(base unsafe.Pointer, n, size int, cmp func(a, b unsafe.Pointer) int) {
-	if n < 2 || size <= 0 {
-		return
+type sorter struct {
+	base unsafe.Pointer
+	size int
+	cmp  func(a, b unsafe.Pointer) int
+}
+
+func (q *sorter) at(i int) unsafe.Pointer { return unsafe.Add(q.base, i*q.size) }
+func (q *sorter) swap(i, j int)           { swap(q.at(i), q.at(j), q.size) }
+
+func (q *sorter) insertion(lo, hi int) {
+	for i := lo + 1; i < hi; i++ {
+		for j := i; j > lo && q.cmp(q.at(j-1), q.at(j)) > 0; j-- {
+			q.swap(j-1, j)
+		}
 	}
-	el := func(i int) unsafe.Pointer { return unsafe.Add(base, i*size) }
+}
+
+func (q *sorter) heapsort(lo, hi int) {
+	n := hi - lo
 	sift := func(root, end int) {
 		for {
 			child := 2*root + 1
 			if child >= end {
 				return
 			}
-			if child+1 < end && cmp(el(child), el(child+1)) < 0 {
+			if child+1 < end && q.cmp(q.at(lo+child), q.at(lo+child+1)) < 0 {
 				child++
 			}
-			if cmp(el(root), el(child)) >= 0 {
+			if q.cmp(q.at(lo+root), q.at(lo+child)) >= 0 {
 				return
 			}
-			swap(el(root), el(child), size)
+			q.swap(lo+root, lo+child)
 			root = child
 		}
 	}
@@ -249,9 +271,71 @@ func Qsort(base unsafe.Pointer, n, size int, cmp func(a, b unsafe.Pointer) int) 
 		sift(i, n)
 	}
 	for end := n - 1; end > 0; end-- {
-		swap(el(0), el(end), size)
+		q.swap(lo, lo+end)
 		sift(0, end)
 	}
+}
+
+// partition splits [lo,hi) around a median-of-three pivot and returns the
+// pivot's final index. Requires hi-lo >= 3. The median-of-three leaves a
+// sentinel at each end, so the scans below never run off the range.
+func (q *sorter) partition(lo, hi int) int {
+	mid := lo + (hi-lo)/2
+	if q.cmp(q.at(mid), q.at(lo)) < 0 {
+		q.swap(mid, lo)
+	}
+	if q.cmp(q.at(hi-1), q.at(mid)) < 0 {
+		q.swap(hi-1, mid)
+		if q.cmp(q.at(mid), q.at(lo)) < 0 {
+			q.swap(mid, lo)
+		}
+	}
+	q.swap(mid, hi-2) // park the pivot next to the high sentinel
+	pivot := q.at(hi - 2)
+	i, j := lo, hi-2
+	for {
+		for i++; q.cmp(q.at(i), pivot) < 0; i++ {
+		}
+		for j--; q.cmp(pivot, q.at(j)) < 0; j-- {
+		}
+		if i >= j {
+			break
+		}
+		q.swap(i, j)
+	}
+	q.swap(i, hi-2)
+	return i
+}
+
+func (q *sorter) sort(lo, hi, depth int) {
+	for hi-lo > 12 {
+		if depth == 0 { // too many bad pivots: fall back to the O(n log n) guarantee
+			q.heapsort(lo, hi)
+			return
+		}
+		depth--
+		p := q.partition(lo, hi)
+		if p-lo < hi-p-1 { // recurse into the smaller side so stack depth stays O(log n)
+			q.sort(lo, p, depth)
+			lo = p + 1
+		} else {
+			q.sort(p+1, hi, depth)
+			hi = p
+		}
+	}
+	q.insertion(lo, hi)
+}
+
+// Qsort sorts n elements of size bytes in place. It is an introsort:
+// quicksort with median-of-three pivots, insertion sort for short ranges, and
+// a heapsort fallback that bounds the worst case at O(n log n). It does not
+// allocate and is not stable.
+func Qsort(base unsafe.Pointer, n, size int, cmp func(a, b unsafe.Pointer) int) {
+	if n < 2 || size <= 0 {
+		return
+	}
+	q := sorter{base, size, cmp}
+	q.sort(0, n, 2*bits.Len(uint(n)))
 }
 
 // Bsearch searches a sorted array for key, returning a pointer to a match or nil.

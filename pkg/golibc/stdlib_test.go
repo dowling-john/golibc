@@ -39,17 +39,17 @@ func TestStrtol(t *testing.T) {
 			t.Errorf("Strtol(%q,%d) = %d rest %q; want %d rest %q", c.s, c.base, got, GoStr(end), c.want, c.rest)
 		}
 	}
-	Errno = 0
-	if got := Strtol(CStr("9223372036854775808"), nil, 10); got != math.MaxInt64 || Errno != ERANGE {
-		t.Errorf("overflow: %d %v", got, Errno)
+	SetErrno(0)
+	if got := Strtol(CStr("9223372036854775808"), nil, 10); got != math.MaxInt64 || GetErrno() != ERANGE {
+		t.Errorf("overflow: %d %v", got, GetErrno())
 	}
-	Errno = 0
-	if got := Strtol(CStr("-99999999999999999999"), nil, 10); got != math.MinInt64 || Errno != ERANGE {
-		t.Errorf("underflow: %d %v", got, Errno)
+	SetErrno(0)
+	if got := Strtol(CStr("-99999999999999999999"), nil, 10); got != math.MinInt64 || GetErrno() != ERANGE {
+		t.Errorf("underflow: %d %v", got, GetErrno())
 	}
-	Errno = 0
+	SetErrno(0)
 	Strtol(CStr("1"), nil, 1)
-	if Errno != EINVAL {
+	if GetErrno() != EINVAL {
 		t.Error("bad base should set EINVAL")
 	}
 }
@@ -61,9 +61,9 @@ func TestStrtoul(t *testing.T) {
 	if got := Strtoul(CStr("-1"), nil, 10); got != math.MaxUint64 {
 		t.Errorf("-1 wraps: %d", got)
 	}
-	Errno = 0
-	if got := Strtoul(CStr("18446744073709551616"), nil, 10); got != math.MaxUint64 || Errno != ERANGE {
-		t.Errorf("overflow: %d %v", got, Errno)
+	SetErrno(0)
+	if got := Strtoul(CStr("18446744073709551616"), nil, 10); got != math.MaxUint64 || GetErrno() != ERANGE {
+		t.Errorf("overflow: %d %v", got, GetErrno())
 	}
 	if Atoi(CStr("  123abc")) != 123 || Atol(CStr("-9")) != -9 {
 		t.Error("Atoi/Atol")
@@ -98,9 +98,9 @@ func TestStrtod(t *testing.T) {
 	if !math.IsNaN(Atof(CStr("nan"))) {
 		t.Error("nan")
 	}
-	Errno = 0
+	SetErrno(0)
 	Strtod(CStr("1e400"), nil)
-	if Errno != ERANGE {
+	if GetErrno() != ERANGE {
 		t.Error("overflow should set ERANGE")
 	}
 }
@@ -231,5 +231,86 @@ func TestAtexitOrder(t *testing.T) {
 	runAtexit()
 	if len(order) != 2 || order[0] != 2 || order[1] != 1 {
 		t.Errorf("order = %v, want [2 1]", order)
+	}
+}
+
+// Adversarial inputs must stay within an O(n log n) comparison budget.
+func TestQsortPatternsAndBudget(t *testing.T) {
+	const n = 50000
+	patterns := map[string]func(i int) int32{
+		"sorted":    func(i int) int32 { return int32(i) },
+		"reversed":  func(i int) int32 { return int32(n - i) },
+		"equal":     func(i int) int32 { return 7 },
+		"organpipe": func(i int) int32 { return int32(min(i, n-i)) },
+		"few":       func(i int) int32 { return int32(i * 7919 % 5) },
+		"sawtooth":  func(i int) int32 { return int32(i % 100) },
+		"random":    func(i int) int32 { return int32(Rand()) },
+		// Classic median-of-three killer: forces bad pivots until the heapsort fallback kicks in.
+		"killer": func(i int) int32 {
+			if i%2 == 0 {
+				return int32(i + 1)
+			}
+			return int32(n/2 + i/2)
+		},
+	}
+	for name, gen := range patterns {
+		a := make([]int32, n)
+		for i := range a {
+			a[i] = gen(i)
+		}
+		want := append([]int32(nil), a...)
+		sort.Slice(want, func(i, j int) bool { return want[i] < want[j] })
+		cmps := 0
+		Qsort(unsafe.Pointer(&a[0]), n, 4, func(x, y unsafe.Pointer) int {
+			cmps++
+			return cmpInt(x, y)
+		})
+		for i := range a {
+			if a[i] != want[i] {
+				t.Fatalf("%s: wrong at %d", name, i)
+			}
+		}
+		if budget := 4 * n * 16; cmps > budget { // 4 * n * log2(n)
+			t.Errorf("%s: %d comparisons exceeds budget %d", name, cmps, budget)
+		}
+	}
+}
+
+func TestQsortElementSizes(t *testing.T) {
+	for _, size := range []int{1, 2, 3, 8, 12, 16, 24, 100} {
+		n := 300
+		buf := make([]byte, n*size+8)
+		base := unsafe.Pointer(&buf[3]) // deliberately misaligned
+		for i := 0; i < n; i++ {
+			e := mem(unsafe.Add(base, i*size), size)
+			e[0] = byte(Rand() % 200)
+			for k := 1; k < size; k++ {
+				e[k] = e[0] + byte(k) // payload derived from the key detects torn swaps
+			}
+		}
+		Qsort(base, n, size, func(a, b unsafe.Pointer) int { return int(*(*byte)(a)) - int(*(*byte)(b)) })
+		for i := 0; i < n; i++ {
+			e := mem(unsafe.Add(base, i*size), size)
+			if i > 0 && mem(unsafe.Add(base, (i-1)*size), 1)[0] > e[0] {
+				t.Fatalf("size %d: unsorted at %d", size, i)
+			}
+			for k := 1; k < size; k++ {
+				if e[k] != e[0]+byte(k) {
+					t.Fatalf("size %d: element %d torn", size, i)
+				}
+			}
+		}
+	}
+}
+
+func TestQsortHeapsortFallback(t *testing.T) {
+	a := make([]int32, 1000)
+	for i := range a {
+		a[i] = int32(Rand() % 50)
+	}
+	q := sorter{unsafe.Pointer(&a[0]), 4, cmpInt}
+	q.sort(0, len(a), 0) // depth 0: goes straight to the fallback
+	if !sort.SliceIsSorted(a, func(i, j int) bool { return a[i] < a[j] }) {
+		t.Error("heapsort fallback produced unsorted output")
 	}
 }

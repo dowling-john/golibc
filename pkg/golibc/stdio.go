@@ -61,11 +61,12 @@ func (f *File) bufMode() int {
 func writeAll(fd int, p []byte) int {
 	done := 0
 	for done < len(p) {
-		n := Write(fd, unsafe.Pointer(&p[done]), len(p)-done)
-		if n < 0 {
-			if Errno == EINTR {
-				continue
-			}
+		n, e := rawWrite(fd, unsafe.Pointer(&p[done]), len(p)-done)
+		if e == EINTR {
+			continue
+		}
+		if e != 0 {
+			SetErrno(e)
 			break
 		}
 		done += n
@@ -107,7 +108,7 @@ func (f *File) dropRead() {
 func writeBytes(f *File, data []byte) int {
 	if !f.canWrite {
 		f.err = true
-		Errno = EBADF
+		SetErrno(EBADF)
 		return 0
 	}
 	f.dropRead()
@@ -148,7 +149,7 @@ func writeBytes(f *File, data []byte) int {
 func fill(f *File) bool {
 	if !f.canRead {
 		f.err = true
-		Errno = EBADF
+		SetErrno(EBADF)
 		return false
 	}
 	f.flushW()
@@ -163,19 +164,20 @@ func fill(f *File) bool {
 		f.rbuf = make([]byte, size)
 	}
 	for {
-		n := Read(f.fd, unsafe.Pointer(&f.rbuf[0]), len(f.rbuf))
+		n, e := rawRead(f.fd, unsafe.Pointer(&f.rbuf[0]), len(f.rbuf))
 		switch {
-		case n > 0:
-			f.rpos, f.rend = 0, n
-			return true
+		case e == EINTR:
+			continue
+		case e != 0:
+			SetErrno(e)
+			f.err = true
+			return false
 		case n == 0:
 			f.eof = true
 			return false
-		case Errno == EINTR:
-			continue
 		default:
-			f.err = true
-			return false
+			f.rpos, f.rend = 0, n
+			return true
 		}
 	}
 }
@@ -228,7 +230,7 @@ func register(f *File) *File {
 func Fopen(path, mode *byte) *File {
 	flags, r, w, ok := parseMode(mode)
 	if !ok {
-		Errno = EINVAL
+		SetErrno(EINVAL)
 		return nil
 	}
 	fd := Open(path, flags, 0o666)
@@ -242,7 +244,7 @@ func Fopen(path, mode *byte) *File {
 func Fdopen(fd int, mode *byte) *File {
 	_, r, w, ok := parseMode(mode)
 	if !ok {
-		Errno = EINVAL
+		SetErrno(EINVAL)
 		return nil
 	}
 	return register(&File{fd: fd, canRead: r, canWrite: w})
@@ -421,12 +423,12 @@ func Clearerr(f *File)    { f.eof, f.err = false, false }
 // Remove deletes a file.
 func Remove(path *byte) int { return Unlink(path) }
 
-// Perror prints s, a colon, and the message for Errno to stderr.
+// Perror prints s, a colon, and the message for errno to stderr.
 func Perror(s *byte) {
 	if s != nil && *s != 0 {
 		Fputs(s, Stderr)
 		Fputs(CStr(": "), Stderr)
 	}
-	Fputs(Strerror(int(Errno)), Stderr)
+	Fputs(Strerror(int(GetErrno())), Stderr)
 	Fputc('\n', Stderr)
 }
