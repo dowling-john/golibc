@@ -61,3 +61,12 @@ func ExampleStrstr() {
 	fmt.Println(golibc.GoStr(golibc.Strstr(hay, golibc.CStr("brown"))))
 	// Output: brown fox
 }
+
+func ExampleSscanf() {
+	var name string
+	var age int
+	var score float64
+	n := golibc.Sscanf(golibc.CStr("ada 36 99.5"), golibc.CStr("%s %d %lf"), &name, &age, &score)
+	fmt.Println(n, name, age, score)
+	// Output: 3 ada 36 99.5
+}
