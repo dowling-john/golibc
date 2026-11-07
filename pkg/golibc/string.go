@@ -2,7 +2,10 @@
 
 package golibc
 
-import "unsafe"
+import (
+	"bytes"
+	"unsafe"
+)
 
 // Char is a C `char *` style pointer to a NUL-terminated string.
 // Memory is raw: callers own bounds, as in C.
@@ -51,10 +54,11 @@ func Memcmp(a, b unsafe.Pointer, n int) int {
 
 // Memchr returns a pointer to the first byte equal to c in the first n bytes, or nil.
 func Memchr(p unsafe.Pointer, c int, n int) unsafe.Pointer {
-	for i, v := range mem(p, n) {
-		if v == byte(c) {
-			return unsafe.Add(p, i)
-		}
+	if n <= 0 {
+		return nil
+	}
+	if i := bytes.IndexByte(mem(p, n), byte(c)); i >= 0 {
+		return unsafe.Add(p, i)
 	}
 	return nil
 }

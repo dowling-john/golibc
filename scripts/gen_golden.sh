@@ -5,6 +5,7 @@
 #   strftime.golden from strftime.cases (glibc gmtime_r + strftime, TZ unset = UTC)
 #   gmtime.golden  from gmtime.cases  (glibc gmtime_r)
 #   localtime.golden from localtime.cases (glibc localtime_r + mktime under various TZ)
+#   random.golden  from random.cases  (glibc rand, random and the *rand48 family per seed)
 # Needs docker. Run from the repo root (or use `make golden`).
 set -e
 dir=pkg/golibc/testdata
@@ -101,6 +102,26 @@ for line in cases(f'{d}/localtime.cases'):
         out.append(f'tm=(struct tm){{.tm_year={y}-1900,.tm_mon={mo}-1,.tm_mday={da},.tm_hour={h},.tm_min={mi},.tm_sec={se},.tm_isdst=-1}}; t=mktime(&tm); printf("t=%ld ",(long)t); {show}')
 out.append('return 0;}')
 open(f'{w}/localtime.c', 'w').write('\n'.join(out))
+# ---- random: one seed per line, "-" for the unseeded default state ----
+out = ['#include <stdio.h>', '#include <stdlib.h>', 'int main(void){', 'unsigned short xs[3];']
+for line in cases(f'{d}/random.cases'):
+    seed = line.strip()
+    out.append('{ int i;')
+    if seed != '-':
+        out.append(f'srand({seed}U); srand48((long){seed}U);')
+    out.append(f'printf("{seed} rand:"); for(i=0;i<10;i++) printf(" %d", rand());')
+    if seed != '-':
+        out.append(f'srandom({seed}U);')
+    out.append('printf(" random:"); for(i=0;i<5;i++) printf(" %ld", random());')
+    out.append('printf(" lrand48:"); for(i=0;i<5;i++) printf(" %ld", lrand48());')
+    out.append('printf(" mrand48:"); for(i=0;i<5;i++) printf(" %ld", mrand48());')
+    out.append('printf(" drand48:"); for(i=0;i<3;i++) printf(" %.17g", drand48());')
+    out.append('xs[0]=1; xs[1]=2; xs[2]=3; printf(" nrand48:"); for(i=0;i<3;i++) printf(" %ld", nrand48(xs)); printf(" xs=%u,%u,%u", xs[0], xs[1], xs[2]);')
+    out.append('xs[0]=1; xs[1]=2; xs[2]=3; printf(" jrand48:"); for(i=0;i<3;i++) printf(" %ld", jrand48(xs));')
+    out.append('xs[0]=1; xs[1]=2; xs[2]=3; printf(" erand48:"); for(i=0;i<3;i++) printf(" %.17g", erand48(xs));')
+    out.append('printf("\\n"); }')
+out.append('return 0;}')
+open(f'{w}/random.c', 'w').write('\n'.join(out))
 PY
 
 docker run --rm -v "$work":/w golang:1.23 sh -c '
@@ -108,6 +129,7 @@ docker run --rm -v "$work":/w golang:1.23 sh -c '
   gcc -w -o /scan /w/scan.c && /scan > /w/scan.golden &&
   gcc -w -o /strftime /w/strftime.c && /strftime > /w/strftime.golden &&
   gcc -w -o /gmtime /w/gmtime.c && /gmtime > /w/gmtime.golden &&
-  gcc -w -o /localtime /w/localtime.c && /localtime > /w/localtime.golden'
-cp "$work/printf.golden" "$work/scan.golden" "$work/strftime.golden" "$work/gmtime.golden" "$work/localtime.golden" "$dir/"
+  gcc -w -o /localtime /w/localtime.c && /localtime > /w/localtime.golden &&
+  gcc -w -o /random /w/random.c && /random > /w/random.golden'
+cp "$work/printf.golden" "$work/scan.golden" "$work/strftime.golden" "$work/gmtime.golden" "$work/localtime.golden" "$work/random.golden" "$dir/"
 wc -l "$dir"/*.golden

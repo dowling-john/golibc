@@ -473,8 +473,9 @@ loop:
 	return assigned
 }
 
-// Sscanf reads formatted input from the C string str.
-func Sscanf(str, format *byte, args ...any) int {
+// Vsscanf reads formatted input from the C string str. ap holds the pointers
+// to fill, as for Sscanf.
+func Vsscanf(str, format *byte, ap VaList) int {
 	pos := 0
 	return scan(newScanner(func() int {
 		c := at(str, pos)
@@ -483,18 +484,27 @@ func Sscanf(str, format *byte, args ...any) int {
 		}
 		pos++
 		return int(c)
-	}), format, args)
+	}), format, ap)
 }
 
-// Fscanf reads formatted input from f.
-func Fscanf(f *File, format *byte, args ...any) int {
+// Sscanf reads formatted input from the C string str.
+func Sscanf(str, format *byte, args ...any) int { return Vsscanf(str, format, args) }
+
+// Vfscanf reads formatted input from f.
+func Vfscanf(f *File, format *byte, ap VaList) int {
 	s := newScanner(func() int { return Fgetc(f) })
-	n := scan(s, format, args)
+	n := scan(s, format, ap)
 	if s.back != noBack && s.back != EOF {
 		Ungetc(s.back, f) // return the lookahead byte to the stream
 	}
 	return n
 }
 
+// Fscanf reads formatted input from f.
+func Fscanf(f *File, format *byte, args ...any) int { return Vfscanf(f, format, args) }
+
+// Vscanf reads formatted input from stdin.
+func Vscanf(format *byte, ap VaList) int { return Vfscanf(Stdin, format, ap) }
+
 // Scanf reads formatted input from stdin.
-func Scanf(format *byte, args ...any) int { return Fscanf(Stdin, format, args...) }
+func Scanf(format *byte, args ...any) int { return Vfscanf(Stdin, format, args) }

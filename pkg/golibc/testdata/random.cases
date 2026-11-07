@@ -1,0 +1,11 @@
+# One seed per line; "-" means no seeding call (the default state).
+-
+1
+0
+2
+42
+12345
+305419896
+2147483647
+2147483648
+4294967295

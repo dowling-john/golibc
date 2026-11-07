@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/bits"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -138,7 +139,19 @@ func Atol(s *byte) int64  { return Strtol(s, nil, 10) }
 func Atoll(s *byte) int64 { return Strtol(s, nil, 10) }
 
 // Strtod converts the initial part of s to a float64 (decimal, inf, nan).
-func Strtod(s *byte, endp **byte) float64 {
+func Strtod(s *byte, endp **byte) float64 { return scanFloat(s, endp, 64) }
+
+// Strtof is Strtod rounded to a float32. A value too large for a float32 gives
+// ±Inf and sets errno to ERANGE.
+func Strtof(s *byte, endp **byte) float32 { return float32(scanFloat(s, endp, 32)) }
+
+// Strtold is Strtod. Go has no long double, so the result is a float64 and
+// carries no more precision than Strtod does.
+func Strtold(s *byte, endp **byte) float64 { return scanFloat(s, endp, 64) }
+
+// scanFloat finds the longest numeric prefix of s and converts it for a float
+// of the given width (32 or 64).
+func scanFloat(s *byte, endp **byte, bits int) float64 {
 	i := 0
 	for Isspace(int(at(s, i))) {
 		i++
@@ -189,7 +202,7 @@ func Strtod(s *byte, endp **byte) float64 {
 			}
 		}
 	}
-	v, err := strconv.ParseFloat(string(unsafe.Slice((*byte)(unsafe.Add(unsafe.Pointer(s), start)), i-start)), 64)
+	v, err := strconv.ParseFloat(string(unsafe.Slice((*byte)(unsafe.Add(unsafe.Pointer(s), start)), i-start)), bits)
 	if err != nil && v != 0 { // overflow to ±Inf; plain syntax errors can't happen here
 		SetErrno(ERANGE)
 	}
@@ -356,27 +369,6 @@ func Bsearch(key, base unsafe.Pointer, n, size int, cmp func(a, b unsafe.Pointer
 	return nil
 }
 
-var (
-	randMu    sync.Mutex
-	randState uint64 = 1
-)
-
-// Srand seeds Rand.
-func Srand(seed uint) {
-	randMu.Lock()
-	randState = uint64(seed)
-	randMu.Unlock()
-}
-
-// Rand returns a pseudo-random int in [0, RAND_MAX] (64-bit LCG, top bits).
-func Rand() int {
-	randMu.Lock()
-	randState = randState*6364136223846793005 + 1442695040888963407
-	v := randState >> 33
-	randMu.Unlock()
-	return int(v)
-}
-
 // Getenv returns the value of the named variable as a C string, or nil.
 // The returned memory is Go-managed.
 func Getenv(name *byte) *byte {
@@ -384,6 +376,89 @@ func Getenv(name *byte) *byte {
 		return CStr(v)
 	}
 	return nil
+}
+
+// Setenv sets the named variable. With overwrite 0 an existing value is kept.
+// It returns -1 with errno EINVAL if name is empty or contains '='. The
+// change is visible to Getenv and to children started with Spawn.
+func Setenv(name, value *byte, overwrite int) int {
+	n := GoStr(name)
+	if overwrite == 0 {
+		if _, ok := syscall.Getenv(n); ok {
+			return 0
+		}
+	}
+	if syscall.Setenv(n, GoStr(value)) != nil {
+		SetErrno(EINVAL)
+		return -1
+	}
+	return 0
+}
+
+// Unsetenv removes the named variable. It returns -1 with errno EINVAL if
+// name is empty or contains '='.
+func Unsetenv(name *byte) int {
+	n := GoStr(name)
+	if n == "" || strings.IndexByte(n, '=') >= 0 {
+		SetErrno(EINVAL)
+		return -1
+	}
+	syscall.Unsetenv(n)
+	return 0
+}
+
+// Putenv adds or replaces a variable from a "NAME=value" string, as glibc
+// does; a string with no '=' removes the variable. Unlike C, the string is
+// copied, so later changes to the caller's buffer do not affect the
+// environment.
+func Putenv(str *byte) int {
+	s := GoStr(str)
+	i := strings.IndexByte(s, '=')
+	if i < 0 {
+		return Unsetenv(str)
+	}
+	if syscall.Setenv(s[:i], s[i+1:]) != nil {
+		SetErrno(EINVAL)
+		return -1
+	}
+	return 0
+}
+
+// Clearenv removes every variable.
+func Clearenv() int {
+	syscall.Clearenv()
+	return 0
+}
+
+var (
+	quickMu    sync.Mutex
+	quickFuncs []func()
+)
+
+// AtQuickExit registers fn to run, in reverse order, when QuickExit is called.
+func AtQuickExit(fn func()) int {
+	quickMu.Lock()
+	quickFuncs = append(quickFuncs, fn)
+	quickMu.Unlock()
+	return 0
+}
+
+// QuickExit runs the AtQuickExit handlers and ends the process. Unlike Exit it
+// does not run Atexit handlers and does not flush stdio.
+func QuickExit(code int) {
+	for {
+		quickMu.Lock()
+		n := len(quickFuncs)
+		if n == 0 {
+			quickMu.Unlock()
+			break
+		}
+		fn := quickFuncs[n-1]
+		quickFuncs = quickFuncs[:n-1]
+		quickMu.Unlock()
+		fn()
+	}
+	ExitNow(code)
 }
 
 var (

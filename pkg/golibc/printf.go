@@ -361,10 +361,15 @@ func format(dst []byte, f *byte, args []any) []byte {
 	}
 }
 
-// Snprintf writes at most size bytes (including the NUL) to dst and returns
+// VaList stands in for C's va_list: the arguments a variadic caller received.
+// The v* functions take it where C takes a va_list, so a variadic wrapper
+// passes its own args straight through.
+type VaList = []any
+
+// Vsnprintf writes at most size bytes (including the NUL) to dst and returns
 // the length the full output would have had, as in C.
-func Snprintf(dst *byte, size int, f *byte, args ...any) int {
-	out := format(nil, f, args)
+func Vsnprintf(dst *byte, size int, f *byte, ap VaList) int {
+	out := format(nil, f, ap)
 	if size > 0 {
 		n := min(len(out), size-1)
 		copy(unsafe.Slice(dst, size), out[:n])
@@ -373,16 +378,24 @@ func Snprintf(dst *byte, size int, f *byte, args ...any) int {
 	return len(out)
 }
 
-// Sprintf writes to dst, which must be large enough. It returns the length.
-func Sprintf(dst, f *byte, args ...any) int {
-	out := format(nil, f, args)
+// Snprintf is Vsnprintf with the arguments listed out.
+func Snprintf(dst *byte, size int, f *byte, args ...any) int {
+	return Vsnprintf(dst, size, f, args)
+}
+
+// Vsprintf writes to dst, which must be large enough. It returns the length.
+func Vsprintf(dst, f *byte, ap VaList) int {
+	out := format(nil, f, ap)
 	copy(unsafe.Slice(dst, len(out)+1), append(out, 0))
 	return len(out)
 }
 
-// Asprintf allocates the result with Malloc (release with Free) and stores it in *strp.
-func Asprintf(strp **byte, f *byte, args ...any) int {
-	out := format(nil, f, args)
+// Sprintf is Vsprintf with the arguments listed out.
+func Sprintf(dst, f *byte, args ...any) int { return Vsprintf(dst, f, args) }
+
+// Vasprintf allocates the result with Malloc (release with Free) and stores it in *strp.
+func Vasprintf(strp **byte, f *byte, ap VaList) int {
+	out := format(nil, f, ap)
 	p := Malloc(len(out) + 1)
 	if p == nil {
 		return -1
@@ -394,21 +407,34 @@ func Asprintf(strp **byte, f *byte, args ...any) int {
 	return len(out)
 }
 
-func Fprintf(fp *File, f *byte, args ...any) int {
-	out := format(nil, f, args)
+// Asprintf is Vasprintf with the arguments listed out.
+func Asprintf(strp **byte, f *byte, args ...any) int { return Vasprintf(strp, f, args) }
+
+// Vfprintf writes formatted output to fp.
+func Vfprintf(fp *File, f *byte, ap VaList) int {
+	out := format(nil, f, ap)
 	if writeBytes(fp, out) != len(out) {
 		return -1
 	}
 	return len(out)
 }
 
-func Printf(f *byte, args ...any) int { return Fprintf(Stdout, f, args...) }
+// Fprintf is Vfprintf with the arguments listed out.
+func Fprintf(fp *File, f *byte, args ...any) int { return Vfprintf(fp, f, args) }
 
-// Dprintf writes straight to a file descriptor, bypassing stdio buffering.
-func Dprintf(fd int, f *byte, args ...any) int {
-	out := format(nil, f, args)
+// Vprintf writes formatted output to stdout.
+func Vprintf(f *byte, ap VaList) int { return Vfprintf(Stdout, f, ap) }
+
+func Printf(f *byte, args ...any) int { return Vfprintf(Stdout, f, args) }
+
+// Vdprintf writes straight to a file descriptor, bypassing stdio buffering.
+func Vdprintf(fd int, f *byte, ap VaList) int {
+	out := format(nil, f, ap)
 	if writeAll(fd, out) != len(out) {
 		return -1
 	}
 	return len(out)
 }
+
+// Dprintf is Vdprintf with the arguments listed out.
+func Dprintf(fd int, f *byte, args ...any) int { return Vdprintf(fd, f, args) }

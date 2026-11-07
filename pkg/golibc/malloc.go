@@ -282,6 +282,16 @@ func Calloc(nmemb, size int) unsafe.Pointer {
 	return p
 }
 
+// Reallocarray is Realloc(p, nmemb*size) that fails with ENOMEM, instead of
+// wrapping around, when the product overflows.
+func Reallocarray(p unsafe.Pointer, nmemb, size int) unsafe.Pointer {
+	if nmemb < 0 || size < 0 || (nmemb != 0 && size > math.MaxInt/nmemb) {
+		SetErrno(ENOMEM)
+		return nil
+	}
+	return Realloc(p, nmemb*size)
+}
+
 // Realloc resizes a block, preserving contents up to the smaller size. On
 // failure it returns nil and leaves the original block valid.
 func Realloc(p unsafe.Pointer, n int) unsafe.Pointer {
