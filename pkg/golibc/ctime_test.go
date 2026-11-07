@@ -209,8 +209,9 @@ func TestLocaltimeGoldenHelper(t *testing.T) {
 	if tz == "" {
 		t.Skip("helper for TestLocaltimeGolden")
 	}
-	if _, err := time.LoadLocation(tz); err != nil {
-		t.Skip("no zone data: ", err)
+	Tzset()
+	if z := currentZone(true); z.rule == nil && z.loc == time.UTC && tz != "UTC" {
+		t.Skip("no zone data for ", tz)
 	}
 	cases, golden := casesAndGolden(t, "localtime")
 	for i, c := range cases {

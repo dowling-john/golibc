@@ -45,10 +45,10 @@ Go can issue the ioctls but offers no termios API and no pty helpers.
 - [ ] `Ttyname`
 
 ### Time
-- [ ] `Strptime`. Go's `time.Parse` has a different model and cannot parse C format strings.
-- [ ] `Tzset`, the `timezone` and `tzname` variables, and **POSIX `TZ` rule strings** such as `EST5EDT` (today only named zones work)
-- [ ] `Clock` `Clock_getres` `Clock_nanosleep`
-- [ ] `Timer_create` family (optional)
+- [x] `Strptime`, following glibc and checked against it on about 500 inputs. Go's `time.Parse` has a different model and cannot parse C format strings.
+- [x] `Tzset`, the `Tzname`, `Timezone` and `Daylight` variables, and **POSIX `TZ` rule strings** such as `EST5EDT,M3.2.0,M11.1.0`, checked against glibc across 24 zones and rule strings
+- [x] `Clock` `ClockGetres` `ClockNanosleep`
+- [ ] `Timer_create` family (optional: it needs `sigevent` plumbing through the Go runtime's signal handling, and nothing in the standard library gets in the way, so it waits until something needs it)
 
 ### Patterns, options and formats
 - [ ] **POSIX regular expressions**: `Regcomp` `Regexec` `Regfree` `Regerror`. Go's `regexp.CompilePOSIX` already gives ERE syntax with leftmost-longest matching, so the real gaps are basic regular expressions (BRE) and back-references, which RE2 cannot do.

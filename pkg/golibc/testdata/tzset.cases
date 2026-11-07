@@ -1,0 +1,25 @@
+# TZ. Golden (tzset.golden) is "tzname[0] tzname[1] timezone daylight" after glibc tzset(): see scripts/gen_golden.sh.
+UTC
+America/New_York
+Australia/Sydney
+Europe/London
+Europe/Paris
+Pacific/Auckland
+America/Sao_Paulo
+Asia/Kathmandu
+Asia/Tokyo
+Asia/Kolkata
+Australia/Lord_Howe
+EST5EDT,M3.2.0,M11.1.0
+CET-1CEST,M3.5.0,M10.5.0/3
+AEST-10AEDT,M10.1.0,M4.1.0/3
+<+0545>-5:45
+UTC0
+JST-9
+EST5
+WET0WEST,M3.5.0/1,M10.5.0
+<-03>3<-02>,M3.5.0/-2,M10.5.0/-1
+IST-1GMT0,M10.5.0,M3.5.0/1
+EST5EDT
+Invalid/Zone
+XX

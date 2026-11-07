@@ -6,6 +6,8 @@
 #   gmtime.golden  from gmtime.cases  (glibc gmtime_r)
 #   localtime.golden from localtime.cases (glibc localtime_r + mktime under various TZ)
 #   random.golden  from random.cases  (glibc rand, random and the *rand48 family per seed)
+#   strptime.golden from strptime.cases (glibc strptime into a zeroed struct tm)
+#   tzset.golden   from tzset.cases   (glibc tzname, timezone and daylight after tzset)
 # Needs docker. Run from the repo root (or use `make golden`).
 set -e
 dir=pkg/golibc/testdata
@@ -122,6 +124,26 @@ for line in cases(f'{d}/random.cases'):
     out.append('printf("\\n"); }')
 out.append('return 0;}')
 open(f'{w}/random.c', 'w').write('\n'.join(out))
+# ---- strptime: "input<TAB>format", with C escapes such as \n left for the compiler ----
+def cesc(x):
+    return x.replace('"', '\\"')
+out = ['#define _GNU_SOURCE', '#include <stdio.h>', '#include <stdlib.h>', '#include <string.h>', '#include <time.h>',
+       'int main(void){', 'struct tm tm; const char *in; const char *r;', 'setenv("TZ","UTC",1); tzset();']
+for line in open(f'{d}/strptime.cases'):
+    line = line.rstrip('\n')
+    if line.startswith('#'):
+        continue
+    inp, _, fmt = line.partition('\t')
+    out.append('{ memset(&tm,0,sizeof tm); in="%s"; r=strptime(in,"%s",&tm); if(!r) puts("null"); else printf("%%ld %%d %%d %%d %%d %%d %%d %%d %%d %%d %%ld\\n",(long)(r-in),tm.tm_sec,tm.tm_min,tm.tm_hour,tm.tm_mday,tm.tm_mon,tm.tm_year,tm.tm_wday,tm.tm_yday,tm.tm_isdst,(long)tm.tm_gmtoff); }' % (cesc(inp), cesc(fmt)))
+out.append('return 0;}')
+open(f'{w}/strptime.c', 'w').write('\n'.join(out))
+
+# ---- tzset: one TZ per line ----
+out = ['#include <stdio.h>', '#include <stdlib.h>', '#include <time.h>', 'int main(void){']
+for line in cases(f'{d}/tzset.cases'):
+    out.append(f'setenv("TZ","{line}",1); tzset(); printf("%s %s %ld %d\\n", tzname[0], tzname[1], (long)timezone, daylight);')
+out.append('return 0;}')
+open(f'{w}/tzset.c', 'w').write('\n'.join(out))
 PY
 
 docker run --rm -v "$work":/w golang:1.23 sh -c '
@@ -130,6 +152,8 @@ docker run --rm -v "$work":/w golang:1.23 sh -c '
   gcc -w -o /strftime /w/strftime.c && /strftime > /w/strftime.golden &&
   gcc -w -o /gmtime /w/gmtime.c && /gmtime > /w/gmtime.golden &&
   gcc -w -o /localtime /w/localtime.c && /localtime > /w/localtime.golden &&
-  gcc -w -o /random /w/random.c && /random > /w/random.golden'
-cp "$work/printf.golden" "$work/scan.golden" "$work/strftime.golden" "$work/gmtime.golden" "$work/localtime.golden" "$work/random.golden" "$dir/"
+  gcc -w -o /random /w/random.c && /random > /w/random.golden &&
+  gcc -w -o /strptime /w/strptime.c && /strptime > /w/strptime.golden &&
+  gcc -w -o /tzset /w/tzset.c && /tzset > /w/tzset.golden'
+cp "$work/printf.golden" "$work/scan.golden" "$work/strftime.golden" "$work/gmtime.golden" "$work/localtime.golden" "$work/random.golden" "$work/strptime.golden" "$work/tzset.golden" "$dir/"
 wc -l "$dir"/*.golden

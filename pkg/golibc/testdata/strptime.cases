@@ -1,0 +1,512 @@
+# input<TAB>format. Golden (strptime.golden) comes from glibc strptime with a zeroed struct tm: see scripts/gen_golden.sh.
+1	%d
+1tail	%d
+31	%d
+31tail	%d
+00	%d
+00tail	%d
+32	%d
+32tail	%d
+ 7	%d
+ 7tail	%d
+05	%d
+05tail	%d
+7x	%d
+7xtail	%d
+x	%d
+xtail	%d
+	%d
+tail	%d
+1	%e
+1tail	%e
+ 1	%e
+ 1tail	%e
+31	%e
+31tail	%e
+0	%e
+0tail	%e
+32	%e
+32tail	%e
+0	%H
+0tail	%H
+23	%H
+23tail	%H
+24	%H
+24tail	%H
+9	%H
+9tail	%H
+007	%H
+007tail	%H
+5	%k
+5tail	%k
+ 5	%k
+ 5tail	%k
+23	%k
+23tail	%k
+1	%I
+1tail	%I
+12	%I
+12tail	%I
+0	%I
+0tail	%I
+13	%I
+13tail	%I
+07	%I
+07tail	%I
+3	%l
+3tail	%l
+ 3	%l
+ 3tail	%l
+12	%l
+12tail	%l
+0	%M
+0tail	%M
+59	%M
+59tail	%M
+60	%M
+60tail	%M
+5	%M
+5tail	%M
+0	%S
+0tail	%S
+59	%S
+59tail	%S
+60	%S
+60tail	%S
+61	%S
+61tail	%S
+62	%S
+62tail	%S
+1	%m
+1tail	%m
+12	%m
+12tail	%m
+0	%m
+0tail	%m
+13	%m
+13tail	%m
+09	%m
+09tail	%m
+1	%j
+1tail	%j
+366	%j
+366tail	%j
+0	%j
+0tail	%j
+367	%j
+367tail	%j
+060	%j
+060tail	%j
+59	%j
+59tail	%j
+00	%y
+00tail	%y
+68	%y
+68tail	%y
+69	%y
+69tail	%y
+99	%y
+99tail	%y
+7	%y
+7tail	%y
+123	%y
+123tail	%y
+1970	%Y
+1970tail	%Y
+2024	%Y
+2024tail	%Y
+0	%Y
+0tail	%Y
+9999	%Y
+9999tail	%Y
+12345	%Y
+12345tail	%Y
+99	%Y
+99tail	%Y
+20240	%Y
+20240tail	%Y
+19	%C
+19tail	%C
+20	%C
+20tail	%C
+0	%C
+0tail	%C
+99	%C
+99tail	%C
+100	%C
+100tail	%C
+1	%u
+1tail	%u
+7	%u
+7tail	%u
+0	%u
+0tail	%u
+8	%u
+8tail	%u
+0	%w
+0tail	%w
+6	%w
+6tail	%w
+7	%w
+7tail	%w
+0	%U
+0tail	%U
+53	%U
+53tail	%U
+54	%U
+54tail	%U
+10	%U
+10tail	%U
+0	%W
+0tail	%W
+53	%W
+53tail	%W
+54	%W
+54tail	%W
+10	%W
+10tail	%W
+0	%V
+0tail	%V
+53	%V
+53tail	%V
+54	%V
+54tail	%V
+10	%V
+10tail	%V
+00	%g
+00tail	%g
+99	%g
+99tail	%g
+5	%g
+5tail	%g
+2024	%G
+2024tail	%G
+1	%G
+1tail	%G
+x	%G
+xtail	%G
+Mon	%a
+monday	%a
+MONDAY	%a
+Sun	%a
+Sunday	%a
+Sat	%a
+Saturday	%a
+Jan	%a
+January	%a
+JANUARY	%a
+Mar	%a
+March	%a
+May	%a
+Sept	%a
+September	%a
+Dec	%a
+December	%a
+Xyz	%a
+Mo	%a
+	%a
+Tues	%a
+Tuesday	%a
+Mon	%A
+monday	%A
+MONDAY	%A
+Sun	%A
+Sunday	%A
+Sat	%A
+Saturday	%A
+Jan	%A
+January	%A
+JANUARY	%A
+Mar	%A
+March	%A
+May	%A
+Sept	%A
+September	%A
+Dec	%A
+December	%A
+Xyz	%A
+Mo	%A
+	%A
+Tues	%A
+Tuesday	%A
+Mon	%b
+monday	%b
+MONDAY	%b
+Sun	%b
+Sunday	%b
+Sat	%b
+Saturday	%b
+Jan	%b
+January	%b
+JANUARY	%b
+Mar	%b
+March	%b
+May	%b
+Sept	%b
+September	%b
+Dec	%b
+December	%b
+Xyz	%b
+Mo	%b
+	%b
+Tues	%b
+Tuesday	%b
+Mon	%B
+monday	%B
+MONDAY	%B
+Sun	%B
+Sunday	%B
+Sat	%B
+Saturday	%B
+Jan	%B
+January	%B
+JANUARY	%B
+Mar	%B
+March	%B
+May	%B
+Sept	%B
+September	%B
+Dec	%B
+December	%B
+Xyz	%B
+Mo	%B
+	%B
+Tues	%B
+Tuesday	%B
+Mon	%h
+monday	%h
+MONDAY	%h
+Sun	%h
+Sunday	%h
+Sat	%h
+Saturday	%h
+Jan	%h
+January	%h
+JANUARY	%h
+Mar	%h
+March	%h
+May	%h
+Sept	%h
+September	%h
+Dec	%h
+December	%h
+Xyz	%h
+Mo	%h
+	%h
+Tues	%h
+Tuesday	%h
+AM	%p
+PM	%p
+am	%p
+pm	%p
+Pm	%p
+A	%p
+XM	%p
+	%p
+12 AM	%I %p
+12 PM	%I %p
+1 AM	%I %p
+1 PM	%I %p
+11 PM	%I %p
+11:30 PM	%I %p
+0 AM	%I %p
+13 PM	%I %p
+12:00:00 AM	%r
+12:00:00 PM	%r
+03:04:05 PM	%r
+03:04:05 pm	%I:%M:%S %p
+3:4:5	%l:%M:%S
+12/31/99	%D
+01/02/03	%D
+13/01/01	%D
+1/2/3	%D
+07/04/76	%x
+07/04/2076	%x
+2024-02-29	%F
+2023-02-29	%F
+2024-2-9	%F
+1999-12-31	%F
+2024-13-01	%F
+23:59:59	%T
+24:00:00	%T
+1:2:3	%T
+08:09:10	%X
+23:59	%R
+23:60	%R
+7:05	%R
+Thu Jan  1 00:00:00 1970	%c
+Sun Feb 29 12:34:56 2024	%c
+Mon Dec 31 23:59:59 1999	%c
+thu jan 1 00:00:00 1970	%c
+Xyz Jan  1 00:00:00 1970	%c
+0	%s
+1700000000	%s
+86399	%s
+253402300799	%s
+12x	%s
+x	%s
+-5	%s
+	%s
+1700000000 tail	%s 
++0000	%z
+-0000	%z
++0530	%z
+-0800	%z
++05:30	%z
+-08:00	%z
++05	%z
+-12	%z
++1	%z
++123	%z
++12345	%z
++0560	%z
++0160	%z
+Z	%z
+z	%z
+ +0100	%z
+UTC	%z
+	%z
++	%z
++ab	%z
+UTC	%Z
+EST	%Z
+CEST x	%Z
+  PST	%Z
+	%Z
+America/New_York	%Z
+x	%Z
+2024-01-01 12:00:00 +0200 CEST	%F %T %z %Z
+	 
+   	 
+  x	 x
+x	 x
+a  b	a b
+a\tb	a b
+ab	a b
+1   2	%d %d
+1\n2	%d%n%d
+1 2	%d%t%d
+12	%d%n%d
+  5	%d
+5 	%d 
+5	%d 
+100%	%d%%
+100	%d%%
+50 %	%d %%
+a-b	a-b
+a+b	a-b
+abc	ab
+ab	abc
+5	%-d
+5	%_d
+5	%0d
+MON	%^a
+jan	%#b
+12	%5d
+07	%02H
+1/2/2024	%-m/%-d/%Y
+24	%Ey
+2024	%EY
+Thu Jan  1 00:00:00 1970	%Ec
+20	%EC
+01/02/03	%Ex
+01:02:03	%EX
+5	%Ed
+5	%Od
+5	%Oe
+7	%OH
+7	%OI
+7	%Om
+7	%OM
+7	%OS
+7	%Ou
+7	%OU
+7	%OV
+3	%Ow
+7	%OW
+24	%Oy
+1	%Oq
+1	%Eq
+	%E
+	%O
+	%
+1	%q
+1	%i
+PM	%P
+am	%P
+1	%N
+1	%L
+2024-03-15	%Y-%m-%d
+2000-02-29	%Y-%m-%d
+1900-03-01	%Y-%m-%d
+2100-12-31	%Y-%m-%d
+1969-12-31	%Y-%m-%d
+2024-02-30	%Y-%m-%d
+2023-02-31	%Y-%m-%d
+2024 100	%Y %j
+2023 100	%Y %j
+2024 366	%Y %j
+2023 365	%Y %j
+2024 1	%Y %j
+2024 060	%Y %j
+100 2024	%j %Y
+2024 100 4	%Y %j %w
+2024 100 Mon	%Y %j %a
+2024 10 1	%Y %U %w
+2024 10 1	%Y %W %w
+2024 0 0	%Y %U %w
+2024 53 6	%Y %W %w
+2024 10 Mon	%Y %W %a
+2024 10 Sun	%Y %U %a
+2024 10 3 3 15	%Y %U %w %m %d
+2024 10 3 3	%Y %U %w %m
+2024 10 3 15	%Y %U %w %d
+24	%y
+24 3 15	%y %m %d
+68 1 1	%y %m %d
+69 1 1	%y %m %d
+20 24 3 15	%C %y %m %d
+19 99 12 31	%C %y %m %d
+21 3 15	%C %m %d
+21 00	%C %y
+20 1	%C %Y
+2024 20	%Y %C
+21	%C
+00	%C
+3 15	%m %d
+15	%d
+3	%m
+Mar	%b
+Mar 15	%b %d
+Mon	%a
+Mon 3 15 2024	%a %m %d %Y
+12 15	%I %M
+Jan 5	%B %e
+2024-03-15 13:45:10	%F %T
+2024-03-15T13:45:10Z	%FT%TZ
+2024-03-15T13:45:10+0100	%FT%T%z
+Sun, 31 Dec 2023 23:59:59 GMT	%a, %d %b %Y %H:%M:%S GMT
+31/Dec/2023:23:59:59 +0000	%d/%b/%Y:%H:%M:%S %z
+12/31/2023 11:59 PM	%m/%d/%Y %I:%M %p
+20240315	%Y%m%d
+20240315134510	%Y%m%d%H%M%S
+240315	%y%m%d
+2024-03-15 extra	%F
+2024-03	%F
+	%F
+	
+abc	
+Thursday, January 01, 1970	%A, %B %d, %Y
+1/1/70	%x
+1:02:03	%X
+5	%e%n
+  5  	%e%n
+5 6	%d %d
+13 1	%H %I
+1 13	%I %H
+PM 1	%p %I
+1 PM	%I %p
+1 PM 5	%I %p %H
+5 1 PM	%H %I %p
+Mon Tue	%a %a
+2024 2025	%Y %Y

@@ -2,19 +2,15 @@
 
 package golibc
 
-import (
-	"strconv"
-	"time"
-)
+import "strconv"
 
 // time.h calendar functions: broken-down time, conversion and formatting.
 //
 // Gmtime, Timegm and Strftime are implemented here from scratch and need no
-// time-zone data. Localtime and Mktime take their zone rules from the
-// standard library's time package, which reads the TZ environment variable
-// and /etc/localtime (falling back to Go's embedded zone data). One
-// deviation from C: TZ must name a zone ("America/New_York"), not a POSIX
-// rule string such as "EST5EDT".
+// time-zone data. Localtime and Mktime find their zone through tz.go, which
+// reads the TZ environment variable as glibc does: a zone name or file from
+// the standard library's time package, /etc/localtime when TZ is unset, or a
+// POSIX rule string such as "EST5EDT,M3.2.0,M11.1.0".
 
 // Tm is a broken-down time, like C's struct tm.
 type Tm struct {
@@ -111,21 +107,24 @@ func Timegm(tm *Tm) int64 {
 	return t
 }
 
-// LocaltimeR converts t to broken-down time in the local zone.
-func LocaltimeR(t int64, tm *Tm) *Tm {
-	lt := time.Unix(t, 0)
-	name, off := lt.Zone()
+// LocaltimeR converts t to broken-down time in the local zone. Like glibc's
+// localtime_r it reads TZ once; call Tzset to read it again.
+func LocaltimeR(t int64, tm *Tm) *Tm { return localtimeIn(currentZone(false), t, tm) }
+
+// Localtime is LocaltimeR into a fresh Tm. Like glibc's localtime it notices
+// when TZ has changed.
+func Localtime(t int64) *Tm { return localtimeIn(currentZone(true), t, new(Tm)) }
+
+func localtimeIn(z *zone, t int64, tm *Tm) *Tm {
+	name, off, dst := z.lookup(t)
 	setCalendar(tm, t+int64(off))
 	tm.Gmtoff, tm.Zone = int64(off), name
 	tm.Isdst = 0
-	if lt.IsDST() {
+	if dst {
 		tm.Isdst = 1
 	}
 	return tm
 }
-
-// Localtime is LocaltimeR into a fresh Tm.
-func Localtime(t int64) *Tm { return LocaltimeR(t, new(Tm)) }
 
 // Mktime converts local broken-down time to seconds since the epoch,
 // normalizing out-of-range fields and updating tm (including Wday, Yday, Isdst
@@ -137,16 +136,17 @@ func Localtime(t int64) *Tm { return LocaltimeR(t, new(Tm)) }
 // without a hint depends on earlier calls, so this is the one place the two
 // are not guaranteed to agree.
 func Mktime(tm *Tm) int64 {
+	z := currentZone(true)
 	probe := Tm{Sec: tm.Sec, Min: tm.Min, Hour: tm.Hour, Mday: tm.Mday, Mon: tm.Mon, Year: tm.Year}
 	wall := Timegm(&probe) // the wall-clock reading as if it were UTC
-	_, before := time.Unix(wall-86400, 0).Zone()
-	_, after := time.Unix(wall+86400, 0).Zone()
-	valid := func(off int) bool { _, o := time.Unix(wall-int64(off), 0).Zone(); return o == off }
+	offAt := func(t int64) int { _, off, _ := z.lookup(t); return off }
+	before, after := offAt(wall-86400), offAt(wall+86400)
+	valid := func(off int) bool { return offAt(wall-int64(off)) == off }
 	off := before
 	switch {
 	case valid(before) && valid(after) && before != after: // a fall-back hour: the time occurs twice
 		if tm.Isdst >= 0 { // honor the caller's hint; with none, take the first occurrence
-			if (time.Unix(wall-int64(before), 0).IsDST()) != (tm.Isdst > 0) {
+			if _, _, dst := z.lookup(wall - int64(before)); dst != (tm.Isdst > 0) {
 				off = after
 			}
 		}
@@ -154,7 +154,7 @@ func Mktime(tm *Tm) int64 {
 		off = after
 	}
 	t := wall - int64(off)
-	LocaltimeR(t, tm)
+	localtimeIn(z, t, tm)
 	return t
 }
 
