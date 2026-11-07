@@ -109,6 +109,8 @@ Where C passes a `struct sockaddr` and a length, golibc takes and returns a `Soc
 - No locale support, wide characters, `Fork`, name resolution (`Getaddrinfo`, DNS), or `%a`/`%p` in the printf and scanf families.
 - `math` delegates to Go's standard library rather than reimplementing it.
 
+See the [roadmap](ROADMAP.md) for what is still missing and the planned order of work.
+
 ## Platform support
 
 | Platform | Status |
