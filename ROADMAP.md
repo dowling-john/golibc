@@ -54,26 +54,28 @@ Go can issue the ioctls but offers no termios API and no pty helpers.
 - [ ] **POSIX regular expressions**: `Regcomp` `Regexec` `Regfree` `Regerror`. Go's `regexp.CompilePOSIX` already gives ERE syntax with leftmost-longest matching, so the real gaps are basic regular expressions (BRE) and back-references, which RE2 cannot do.
 - [ ] `Fnmatch` and `Glob` with exact POSIX/glibc semantics (flags such as `FNM_PATHNAME`, `FNM_PERIOD`)
 - [ ] `Getopt` `Getopt_long` `Getopt_long_only` with the `optind`/`optarg`/`optopt` behaviour C programs depend on
-- [ ] `v*` printf and scanf variants: `Vprintf` `Vfprintf` `Vsnprintf` `Vsprintf` `Vasprintf` `Vdprintf` `Vsscanf` `Vfscanf` `Vscanf`. Go's `fmt` uses different verbs. Needs a Go representation of `va_list`, most likely `[]any`.
+- [x] `v*` printf and scanf variants (`VaList` is `[]any`): `Vprintf` `Vfprintf` `Vsnprintf` `Vsprintf` `Vasprintf` `Vdprintf` `Vsscanf` `Vfscanf` `Vscanf`. Go's `fmt` uses different verbs. Needs a Go representation of `va_list`, most likely `[]any`.
 
 ### stdio features Go has no equivalent for
 - [ ] `Fmemopen` `Open_memstream`
 - [ ] `Flockfile` `Ftrylockfile` `Funlockfile` and the `_unlocked` variants, tied to the `File` thread-safety item below
 - [ ] `Popen` `Pclose`, returning a golibc `File`
-- [ ] `Getline` `Getdelim` and `Fgetpos` `Fsetpos`, `Setbuf` `Setlinebuf`, `Tmpfile` (these work on golibc's own `File`, so Go's `bufio` cannot stand in)
+- [x] `Getline` `Getdelim` and `Fgetpos` `Fsetpos`, `Setbuf` `Setlinebuf`, `Tmpfile` (these work on golibc's own `File`, so Go's `bufio` cannot stand in)
 
 ### Memory
 - [ ] `Posix_memalign` `Aligned_alloc` `Memalign` for alignments above 16 bytes. Go's heap cannot give stable, GC-free aligned memory.
-- [ ] `Reallocarray` `Malloc_usable_size`
+- [x] `Reallocarray`
+- [ ] `Malloc_usable_size`
 - [ ] `Mprotect` `Madvise` `Mlock` `Munlock` `Msync`, but only if the `syscall` wrappers prove insufficient (check first)
 
 ### Environment and process state
-- [ ] `Setenv` `Putenv` `Unsetenv` `Clearenv`, sharing state with `Getenv`
-- [ ] `Quick_exit` `At_quick_exit`
+- [x] `Setenv` `Putenv` `Unsetenv` `Clearenv`, sharing state with `Getenv`
+- [x] `QuickExit` `AtQuickExit`
 
 ### Numerics where C and Go differ
-- [ ] `Strtof` and a defined answer for `Strtold` (Go has no long double)
-- [ ] glibc-compatible `Drand48` `Lrand48` `Srand48` `Random` `Srandom` sequences (low priority: only needed when output must match a C program's)
+- [x] `Strtof` and a defined answer for `Strtold` (Go has no long double, so it is `Strtod`)
+- [x] glibc-compatible `Rand` `Srand` `Random` `Srandom` and `Drand48` `Lrand48` `Mrand48` `Erand48` `Nrand48` `Jrand48` `Srand48`, checked against glibc. `Rand` now follows glibc's sequence, so `Srand(1)` gives 1804289383 first.
+- [ ] `Seed48` `Lcong48` `Initstate` `Setstate`
 - [ ] `Fmax` `Fmin` with C's NaN and signed-zero rules (only if `math.Max`/`math.Min` are shown to differ)
 
 ### Networking
@@ -139,12 +141,9 @@ For each required item, whether to build on the standard library or write it her
 
 ### Speeding up what already exists
 
-Reading the current code shows two places where the standard library would be faster:
-
-- `Memchr` and `Strlen` are plain byte loops. The `Mem*` functions already build a `[]byte` view with `mem(p, n)`, so `Memchr` can call `bytes.IndexByte`, which uses SIMD assembly. `Strlen` has no length to hand to Go, so it needs a chunked scan (or a word-at-a-time loop), not a `bytes` call.
-- `Memcpy` and `Memmove` already use `copy`, which is optimal.
-
-I read only `Memchr`, `Strlen`, `Memcpy` and `Memmove`. Check the other `Mem*` and `Str*` functions the same way, and measure with `make bench` before and after.
+- [x] `Memchr` calls `bytes.IndexByte`, which uses SIMD. Measured with `make bench` on an amd64 container (Intel i9, before and after): 16 bytes 985 MB/s to 2.0 GB/s, 256 bytes 1.2 GB/s to 17 GB/s, 4 KiB 1.2 GB/s to 32 GB/s, 64 KiB 1.2 GB/s to 28 GB/s.
+- [ ] `Strlen` is still a byte loop, on purpose. It has no length to give `bytes.IndexByte`, and reading ahead in chunks would run past the end of a Go-allocated string, which `go test -race` (checkptr) reports as an error. A word-at-a-time loop on aligned reads is the option to measure, if `Strlen` ever shows up as a bottleneck.
+- [ ] Check the other `Mem*` and `Str*` functions the same way (`Memcmp`, `Strchr`, `Strstr` and so on), and measure before and after. `Memcpy` and `Memmove` already use `copy`.
 
 ## Covered by Go: not planned
 
